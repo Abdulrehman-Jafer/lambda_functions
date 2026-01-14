@@ -31,6 +31,22 @@ npm install
 npm test
 ```
 
+## Linting
+
+### Python
+```bash
+cd python-hello-world
+pip install flake8
+flake8 lambda_function.py --max-line-length=100
+```
+
+### JavaScript
+```bash
+cd javascript-hello-world
+npm install
+npm run lint
+```
+
 ## CI/CD
 
 The repository uses GitHub Actions for continuous integration and deployment. The workflow automatically:

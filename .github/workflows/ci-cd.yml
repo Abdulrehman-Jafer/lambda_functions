@@ -74,12 +74,12 @@ jobs:
       with:
         node-version: '18'
     
-    - name: Install ESLint
+    - name: Install dependencies
       run: |
         cd javascript-hello-world
-        npm install --save-dev eslint
+        npm install
     
     - name: Lint JavaScript code
       run: |
         cd javascript-hello-world
-        npx eslint index.js --no-eslintrc --env node --env es6 || true
+        npm run lint
