@@ -1,0 +1,12 @@
+{
+  "name": "javascript-hello-world",
+  "version": "1.0.0",
+  "description": "Hello World Lambda function in JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
