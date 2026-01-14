@@ -1,0 +1,88 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, copilot/** ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test-python-lambda:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Test Python Lambda
+      run: |
+        cd python-hello-world
+        python -m unittest test_lambda_function.py
+  
+  test-javascript-lambda:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd javascript-hello-world
+        npm install
+    
+    - name: Test JavaScript Lambda
+      run: |
+        cd javascript-hello-world
+        npm test
+  
+  lint-python:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install flake8
+      run: pip install flake8
+    
+    - name: Lint Python code
+      run: |
+        cd python-hello-world
+        flake8 lambda_function.py --max-line-length=100
+  
+  lint-javascript:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd javascript-hello-world
+        npm install
+    
+    - name: Lint JavaScript code
+      run: |
+        cd javascript-hello-world
+        npm run lint
