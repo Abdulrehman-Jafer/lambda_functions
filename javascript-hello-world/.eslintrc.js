@@ -11,6 +11,6 @@ module.exports = {
         'indent': ['error', 4],
         'quotes': ['error', 'single'],
         'semi': ['error', 'always'],
-        'no-unused-vars': ['error', { 'argsIgnorePattern': '^_', 'args': 'none' }]
+        'no-unused-vars': ['error', { 'args': 'none' }]
     }
 };
