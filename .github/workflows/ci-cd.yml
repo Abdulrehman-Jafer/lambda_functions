@@ -15,11 +15,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Setting up the environment
+        run: |
+          cd trim_video
+          touch .env
+          echo "S3_BUCKET_NAME=trim-videos" >> .env
+
+      - name: Install dependencies
+        run: |
+          cd trim_video
+          pip install -r requirements.txt -t package/
+          
       - name: Zip Lambda function
         run: |
           cd trim_video
-          zip -r trim_video.zip trim_video.py
-          mv trim_video.zip ../trim_video.zip
+          cp trim_video.py package/
+          cp .env package/
+          cd package
+          zip -r ../trim_video.zip .
+          mv ../trim_video.zip ../../trim_video.zip
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,4 +49,7 @@ jobs:
 
       - name: Deploy Lambda function
         run: |
-          aws lambda update-function-code --function-name my-python-lambda-function --zip-file fileb://trim_video.zip --region ${{ secrets.AWS_REGION }}
+          aws lambda update-function-code \
+            --function-name my-python-lambda-function \
+            --zip-file fileb://trim_video.zip \
+            --region ${{ secrets.AWS_REGION }}

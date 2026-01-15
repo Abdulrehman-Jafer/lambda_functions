@@ -1,9 +1,14 @@
 import json
 import subprocess
 import os
-import base64
 import uuid
+import boto3
+from botocore.exceptions import ClientError
 
+s3_client = boto3.client('s3')
+
+S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
+PRESIGNED_URL_EXPIRATION = int(os.environ.get('PRESIGNED_URL_EXPIRATION', 3600))
 def lambda_handler(event, context):
     try:
         if isinstance(event.get('body'), str):
@@ -23,6 +28,14 @@ def lambda_handler(event, context):
                 })
             }
         
+        if not S3_BUCKET:
+            return {
+                'statusCode': 500,
+                'body': json.dumps({
+                    'error': 'S3_BUCKET_NAME environment variable not configured'
+                })
+            }
+        
         start_sec = start_ms / 1000
         end_sec = end_ms / 1000
         duration = end_sec - start_sec
@@ -37,6 +50,7 @@ def lambda_handler(event, context):
         
         unique_id = str(uuid.uuid4())
         output_file = f'/tmp/output_{unique_id}.mp4'
+        s3_key = f'trimmed-videos/{unique_id}.mp4'
         
         ffmpeg_command = [
             'ffmpeg',
@@ -50,11 +64,31 @@ def lambda_handler(event, context):
         
         subprocess.run(ffmpeg_command, check=True, capture_output=True)
         
-        with open(output_file, 'rb') as f:
-            video_data = f.read()
-            video_base64 = base64.b64encode(video_data).decode('utf-8')
-        
         file_size = os.path.getsize(output_file)
+        
+        s3_client.upload_file(
+            output_file,
+            S3_BUCKET,
+            s3_key,
+            ExtraArgs={
+                'ContentType': 'video/mp4',
+                'Metadata': {
+                    'original_url': video_url,
+                    'start_ms': str(start_ms),
+                    'end_ms': str(end_ms),
+                    'duration_seconds': str(duration)
+                }
+            }
+        )
+        
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': S3_BUCKET,
+                'Key': s3_key
+            },
+            ExpiresIn=PRESIGNED_URL_EXPIRATION
+        )
         
         cleanup_files([output_file])
         
@@ -65,9 +99,11 @@ def lambda_handler(event, context):
             },
             'body': json.dumps({
                 'message': 'Video trimmed successfully',
-                'video_base64': video_base64,
+                'presigned_url': presigned_url,
+                's3_key': s3_key,
                 'duration_seconds': duration,
-                'file_size_bytes': file_size
+                'file_size_bytes': file_size,
+                'url_expires_in_seconds': PRESIGNED_URL_EXPIRATION
             })
         }
         
@@ -77,6 +113,14 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'error': 'FFmpeg processing failed',
                 'details': e.stderr.decode() if e.stderr else str(e)
+            })
+        }
+    except ClientError as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({
+                'error': 'S3 operation failed',
+                'details': str(e)
             })
         }
     except Exception as e:

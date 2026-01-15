@@ -54,3 +54,5 @@ htmlcov/
 .tox/
 
 .venv
+
+.env
