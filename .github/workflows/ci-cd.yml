@@ -17,9 +17,9 @@ jobs:
 
       - name: Zip Lambda function
         run: |
-          cd python-hello-world
-          zip -r python-hello-world.zip lambda_function.py
-          mv python-hello-world.zip ../python-hello-world.zip
+          cd trim-video
+          zip -r trim-video.zip trim-video.py
+          mv trim-video.zip ../trim-video.zip
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,4 +30,4 @@ jobs:
 
       - name: Deploy Lambda function
         run: |
-          aws lambda update-function-code --function-name my-python-lambda-function --zip-file fileb://python-hello-world.zip --region ${{ secrets.AWS_REGION }}
+          aws lambda update-function-code --function-name my-python-lambda-function --zip-file fileb://trim-video.zip --region ${{ secrets.AWS_REGION }}
