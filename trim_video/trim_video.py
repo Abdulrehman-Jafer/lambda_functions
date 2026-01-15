@@ -4,11 +4,20 @@ import os
 import uuid
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
-s3_client = boto3.client('s3')
+s3_client = boto3.client(
+    's3',
+    region_name='eu-north-1',
+    config=Config(
+        signature_version='s3v4',
+        s3={'addressing_style': 'virtual'}
+    )
+)
 
-S3_BUCKET = os.environ.get('S3_BUCKET_NAME')
+S3_BUCKET = 'trim-videos'
 PRESIGNED_URL_EXPIRATION = int(os.environ.get('PRESIGNED_URL_EXPIRATION', 3600))
+
 def lambda_handler(event, context):
     try:
         if isinstance(event.get('body'), str):
