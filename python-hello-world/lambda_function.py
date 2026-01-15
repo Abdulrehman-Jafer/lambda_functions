@@ -36,14 +36,11 @@ def lambda_handler(event, context):
             }
         
         unique_id = str(uuid.uuid4())
-        input_file = f'/tmp/input_{unique_id}.mp4'
         output_file = f'/tmp/output_{unique_id}.mp4'
-        
-        download_video(video_url, input_file)
         
         ffmpeg_command = [
             'ffmpeg',
-            '-i', input_file,
+            '-i', video_url,
             '-ss', str(start_sec),
             '-t', str(duration),
             '-c', 'copy',
@@ -59,7 +56,7 @@ def lambda_handler(event, context):
         
         file_size = os.path.getsize(output_file)
         
-        cleanup_files([input_file, output_file])
+        cleanup_files([output_file])
         
         return {
             'statusCode': 200,
@@ -89,10 +86,6 @@ def lambda_handler(event, context):
                 'error': str(e)
             })
         }
-
-def download_video(url, output_path):
-    import urllib.request
-    urllib.request.urlretrieve(url, output_path)
 
 def cleanup_files(file_paths):
     for path in file_paths:
