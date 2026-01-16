@@ -26,6 +26,8 @@ def download_youtube_video(youtube_url, output_path):
         "-f",
         "best[ext=mp4]/best",
         "--no-playlist",
+        "--cookies",
+        "./yt_cookies.txt",
         "-o",
         output_path,
         youtube_url,
