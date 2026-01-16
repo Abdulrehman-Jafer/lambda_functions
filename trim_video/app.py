@@ -67,11 +67,11 @@ def trim_video():
         downloaded_file = None
 
         if is_youtube_url:
-            downloaded_file = f"C:/Windows/Temp/input_{uid}.mp4"
+            downloaded_file = f"/tmp/input_{uid}.mp4"
             download_youtube_video(video_url, downloaded_file)
             input_file = downloaded_file
 
-        output_file = f"C:/Windows/Temp/output_{uid}.mp4"
+        output_file = f"/tmp/output_{uid}.mp4"
         s3_key = f"trimmed-videos/{uid}.mp4"
 
         subprocess.run(
@@ -108,4 +108,4 @@ def trim_video():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
