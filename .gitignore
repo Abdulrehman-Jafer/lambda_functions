@@ -56,3 +56,5 @@ htmlcov/
 .venv
 
 .env
+
+tmp

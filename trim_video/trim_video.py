@@ -5,7 +5,6 @@ import uuid
 import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
-import yt_dlp
 
 s3_client = boto3.client(
     's3',
@@ -19,35 +18,38 @@ s3_client = boto3.client(
 S3_BUCKET = 'trim-videos'
 PRESIGNED_URL_EXPIRATION = int(os.environ.get('PRESIGNED_URL_EXPIRATION', 3600))
 
+YTDLP_BINARY = os.path.join(os.getcwd(), 'yt-dlp')
+
+
 def download_youtube_video(youtube_url, output_path):
-    ydl_opts = {
-        'format': 'best[ext=mp4]/best',
-        'outtmpl': output_path,
-        'quiet': True,
-        'no_warnings': True,
-    }
-    
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([youtube_url])
-        return output_path
-    except Exception as e:
-        raise Exception(f"Failed to download YouTube video: {str(e)}")
+    cmd = [
+        YTDLP_BINARY,
+        '-f', 'best[ext=mp4]/best',
+        '--no-playlist',
+        '-o', output_path,
+        youtube_url
+    ]
+
+    subprocess.run(
+        cmd,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
 
 def lambda_handler(event, context):
     downloaded_file = None
-    
+    output_file = None
+
     try:
-        if isinstance(event.get('body'), str):
-            body = json.loads(event['body'])
-        else:
-            body = event.get('body', event)
-        
+        body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', event)
+
         video_url = body.get('video_url')
         start_ms = body.get('start')
         end_ms = body.get('end')
         is_youtube_url = body.get('is_youtube_url') == "true"
-        
+
         if not all([video_url, start_ms is not None, end_ms is not None]):
             return {
                 'statusCode': 400,
@@ -55,11 +57,11 @@ def lambda_handler(event, context):
                     'error': 'Missing required parameters: video_url, start, end'
                 })
             }
-        
+
         start_sec = start_ms / 1000
         end_sec = end_ms / 1000
         duration = end_sec - start_sec
-        
+
         if duration <= 0:
             return {
                 'statusCode': 400,
@@ -67,30 +69,37 @@ def lambda_handler(event, context):
                     'error': 'End time must be greater than start time'
                 })
             }
-        
+
         unique_id = str(uuid.uuid4())
+
+        input_file = video_url
         output_file = f'/tmp/output_{unique_id}.mp4'
         s3_key = f'trimmed-videos/{unique_id}.mp4'
 
         if is_youtube_url:
-            downloaded_file = f'/tmp/downloaded_{unique_id}.mp4'
+            downloaded_file = f'/tmp/input_{unique_id}.mp4'
             download_youtube_video(video_url, downloaded_file)
-            video_url = downloaded_file
-        
+            input_file = downloaded_file
+
         ffmpeg_command = [
             'ffmpeg',
-            '-i', video_url,
             '-ss', str(start_sec),
+            '-i', input_file,
             '-t', str(duration),
             '-c', 'copy',
             '-y',
             output_file
         ]
-        
-        subprocess.run(ffmpeg_command, check=True, capture_output=True)
-        
+
+        subprocess.run(
+            ffmpeg_command,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
         file_size = os.path.getsize(output_file)
-        
+
         s3_client.upload_file(
             output_file,
             S3_BUCKET,
@@ -98,14 +107,14 @@ def lambda_handler(event, context):
             ExtraArgs={
                 'ContentType': 'video/mp4',
                 'Metadata': {
-                    'original_url': body.get('video_url'),  # Use original URL for metadata
+                    'original_url': video_url,
                     'start_ms': str(start_ms),
                     'end_ms': str(end_ms),
                     'duration_seconds': str(duration)
                 }
             }
         )
-        
+
         presigned_url = s3_client.generate_presigned_url(
             'get_object',
             Params={
@@ -114,17 +123,10 @@ def lambda_handler(event, context):
             },
             ExpiresIn=PRESIGNED_URL_EXPIRATION
         )
-        
-        files_to_cleanup = [output_file]
-        if downloaded_file:
-            files_to_cleanup.append(downloaded_file)
-        cleanup_files(files_to_cleanup)
-        
+
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json'
-            },
+            'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({
                 'message': 'Video trimmed successfully',
                 'presigned_url': presigned_url,
@@ -134,15 +136,16 @@ def lambda_handler(event, context):
                 'url_expires_in_seconds': PRESIGNED_URL_EXPIRATION
             })
         }
-        
+
     except subprocess.CalledProcessError as e:
         return {
             'statusCode': 500,
             'body': json.dumps({
-                'error': 'FFmpeg processing failed',
+                'error': 'Processing failed',
                 'details': e.stderr.decode() if e.stderr else str(e)
             })
         }
+
     except ClientError as e:
         return {
             'statusCode': 500,
@@ -151,6 +154,7 @@ def lambda_handler(event, context):
                 'details': str(e)
             })
         }
+
     except Exception as e:
         return {
             'statusCode': 500,
