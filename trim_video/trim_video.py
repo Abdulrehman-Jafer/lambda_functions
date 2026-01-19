@@ -24,18 +24,15 @@ YTDLP_BINARY = os.path.join(os.getcwd(), 'yt-dlp')
 def download_youtube_video(youtube_url, output_path):
     cmd = [
         YTDLP_BINARY,
-        '-f', 'best[ext=mp4]/best',
-        '--no-playlist',
-        '-o', output_path,
-        youtube_url
+        "-f",
+        "best[ext=mp4]/best",
+        "--no-playlist",
+        "-o",
+        output_path,
+        youtube_url,
     ]
+    subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    subprocess.run(
-        cmd,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
 
 
 def lambda_handler(event, context):
