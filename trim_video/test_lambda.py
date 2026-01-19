@@ -5,8 +5,8 @@ try:
     responose = lambda_handler({
     "body": {
         "video_url": "https://www.youtube.com/watch?v=I1DreZNIo-E",
-        "start": 1000,
-        "end": 3000,
+        "start": 1,
+        "end": 3,
         "is_youtube_url": "true"
     }
     },{})

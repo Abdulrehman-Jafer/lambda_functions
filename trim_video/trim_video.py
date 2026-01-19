@@ -43,11 +43,11 @@ def lambda_handler(event, context):
         body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', event)
 
         video_url = body.get('video_url')
-        start_ms = body.get('start')
-        end_ms = body.get('end')
+        start_s = body.get('start')
+        end_s = body.get('end')
         is_youtube_url = body.get('is_youtube_url') == "true"
 
-        if not all([video_url, start_ms is not None, end_ms is not None]):
+        if not all([video_url, start_s is not None, end_s is not None]):
             return {
                 'statusCode': 400,
                 'body': json.dumps({
@@ -55,9 +55,7 @@ def lambda_handler(event, context):
                 })
             }
 
-        start_sec = start_ms / 1000
-        end_sec = end_ms / 1000
-        duration = end_sec - start_sec
+        duration = end_s - start_s
 
         if duration <= 0:
             return {
@@ -80,7 +78,7 @@ def lambda_handler(event, context):
 
         ffmpeg_command = [
             'ffmpeg',
-            '-ss', str(start_sec),
+            '-ss', str(start_s),
             '-i', input_file,
             '-t', str(duration),
             '-c', 'copy',
@@ -105,8 +103,8 @@ def lambda_handler(event, context):
                 'ContentType': 'video/mp4',
                 'Metadata': {
                     'original_url': video_url,
-                    'start_ms': str(start_ms),
-                    'end_ms': str(end_ms),
+                    'start_s': str(start_s),
+                    'end_s': str(end_s),
                     'duration_seconds': str(duration)
                 }
             }
